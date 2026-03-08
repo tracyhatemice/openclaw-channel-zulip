@@ -191,6 +191,10 @@ The plugin id is `zulip` (defined in `openclaw.plugin.json`). Use this id in `pl
 - [Zulip Bot API docs](https://zulip.com/api/overview)
 - [OpenClaw channel plugin reference](https://openclaw.dev/channels/zulip)
 
+## Related
+
+- **[zulcrawl](https://github.com/FtlC-ian/zulcrawl)** — Zulip archive & search CLI. Mirrors streams, topics, and messages into local SQLite with FTS5 full-text search. Pairs with this plugin to give AI agents searchable access to Zulip conversation history. Inspired by [steipete/discrawl](https://github.com/steipete/discrawl).
+
 ---
 
 ## License
