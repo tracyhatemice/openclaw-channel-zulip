@@ -219,13 +219,20 @@ async function saveZulipMediaBuffer(params: {
     try {
       const execFileAsync = promisify(execFile);
       await execFileAsync("heif-convert", ["-q", "90", savedPath, jpgPath], { timeout: 30000 });
-      // Remove original HEIC file
-      try {
-        await fs.unlink(savedPath);
-      } catch {
-        /* ignore cleanup failure */
+      
+      // Verify conversion produced a valid file
+      const stats = await fs.stat(jpgPath);
+      if (stats.size > 0) {
+        // Conversion succeeded — remove original HEIC file
+        await fs.unlink(savedPath).catch(() => {
+          /* ignore cleanup failure */
+        });
+        return { path: jpgPath, contentType: "image/jpeg" };
       }
-      return { path: jpgPath, contentType: "image/jpeg" };
+      // Conversion produced empty file — fall back to original
+      params.core.logging.getChildLogger({ module: "zulip" }).warn?.(
+        `HEIC conversion produced empty file for ${path.basename(savedPath)} — using original`,
+      );
     } catch {
       // heif-convert not available or conversion failed — use original file
       params.core.logging.getChildLogger({ module: "zulip" }).warn?.(
