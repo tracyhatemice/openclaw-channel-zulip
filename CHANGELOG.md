@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026.3.1
+## 2026.3.17
 
 ### Bug Fixes
 - **Topic parser**: Preserve topics containing colons and slashes in stream target parser (`stream:name/topic` patterns now route correctly)
