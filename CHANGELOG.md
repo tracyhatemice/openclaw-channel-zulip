@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026.3.18
+
+### Bug Fixes
+- **Plugin packaging**: Fix npm package to include compiled JS (`dist/`). Previous versions shipped only TypeScript source due to `.gitignore` fallback, causing `TypeError: Cannot read properties of undefined (reading 'optional')` on load when the host's bundled Zod version didn't match.
+- **Entry point**: Set `main` and `openclaw.extensions` to `./dist/index.js` so the plugin loader resolves compiled output.
+- **Build pipeline**: Add `prepublishOnly` script and `files` allowlist to ensure `dist/` is always built and included in the tarball.
+
 ## 2026.3.17
 
 ### Bug Fixes

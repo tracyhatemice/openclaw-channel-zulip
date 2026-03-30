@@ -1,6 +1,6 @@
 {
   "name": "openclaw-channel-zulip",
-  "version": "2026.3.17",
+  "version": "2026.3.18",
   "description": "Zulip channel plugin for OpenClaw — concurrent message processing, reaction indicators, file uploads, and full actions API",
   "type": "module",
   "author": "FtlC-ian",
@@ -21,15 +21,29 @@
   "bugs": {
     "url": "https://github.com/FtlC-ian/openclaw-channel-zulip/issues"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "openclaw": "^2026.3.2"
+    "openclaw": "^2026.3.2",
+    "typescript": "^5.7.0"
   },
   "openclaw": {
     "extensions": [
-      "./index.ts"
+      "./dist/index.js"
     ],
     "channel": {
       "id": "zulip",

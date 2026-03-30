@@ -1,11 +1,55 @@
-import {
-  BlockStreamingCoalesceSchema,
-  DmPolicySchema,
-  GroupPolicySchema,
-  MarkdownConfigSchema,
-  requireOpenAllowFrom,
-} from "openclaw/plugin-sdk";
 import { z } from "zod";
+
+// Inlined from openclaw/plugin-sdk to avoid module resolution issues
+// when installed via npm to ~/.openclaw/extensions/. These are stable
+// definitions that rarely change. Can revert to SDK imports once the
+// new plugin-sdk ships with proper external resolution support.
+
+const GroupPolicySchema = z.enum(["open", "disabled", "allowlist"]);
+
+const DmPolicySchema = z.enum(["pairing", "allowlist", "open", "disabled"]);
+
+const BlockStreamingCoalesceSchema = z
+  .object({
+    minChars: z.number().int().positive().optional(),
+    maxChars: z.number().int().positive().optional(),
+    idleMs: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+const MarkdownTableModeSchema = z.enum(["native", "codeblock", "disabled"]);
+
+const MarkdownConfigSchema = z
+  .object({
+    tables: MarkdownTableModeSchema.optional(),
+  })
+  .strict()
+  .optional();
+
+const normalizeAllowFrom = (
+  allowFrom?: Array<string | number>,
+): string[] => (allowFrom ?? []).map((v) => String(v).toLowerCase());
+
+const requireOpenAllowFrom = (params: {
+  policy?: string;
+  allowFrom?: Array<string | number>;
+  ctx: z.RefinementCtx;
+  path: Array<string | number>;
+  message: string;
+}) => {
+  if (params.policy !== "open") {
+    return;
+  }
+  const allow = normalizeAllowFrom(params.allowFrom);
+  if (allow.includes("*")) {
+    return;
+  }
+  params.ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: params.path,
+    message: params.message,
+  });
+};
 
 const ZulipAccountSchemaBase = z
   .object({

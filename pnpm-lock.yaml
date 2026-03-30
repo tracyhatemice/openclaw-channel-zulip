@@ -16,7 +16,7 @@ importers:
         specifier: ^2026.3.2
         version: 2026.3.7(@discordjs/opus@0.10.0)(@napi-rs/canvas@0.1.96)(@types/express@5.0.6)(hono@4.12.4)(node-llama-cpp@3.16.2(typescript@5.9.3))
       typescript:
-        specifier: ^5.9.3
+        specifier: ^5.7.0
         version: 5.9.3
 
 packages:
