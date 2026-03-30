@@ -5,7 +5,7 @@ import type {
   OpenClawConfig,
   ReplyPayload,
   RuntimeEnv,
-} from "openclaw/plugin-sdk";
+} from "../sdk.js";
 import {
   createReplyPrefixOptions,
   createScopedPairingAccess,
@@ -22,7 +22,7 @@ import {
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,
   type HistoryEntry,
-} from "openclaw/plugin-sdk";
+} from "../sdk.js";
 import { getZulipRuntime } from "../runtime.js";
 import { resolveZulipAccount } from "./accounts.js";
 import {

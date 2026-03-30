@@ -2,8 +2,8 @@ import type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
   OpenClawConfig,
-} from "openclaw/plugin-sdk";
-import { jsonResult, readNumberParam, readStringParam } from "openclaw/plugin-sdk";
+} from "./sdk.js";
+import { jsonResult, readNumberParam, readStringParam } from "./sdk.js";
 import { resolveZulipAccount } from "./zulip/accounts.js";
 import {
   addZulipReaction,
@@ -394,12 +394,12 @@ function readRealmUpdateParams(
 }
 
 export const zulipMessageActions: ChannelMessageActionAdapter = {
-  listActions: ({ cfg }) => {
+  describeMessageTool: ({ cfg }) => {
     const accounts = [resolveZulipAccount({ cfg })].filter((account) =>
       Boolean(account.apiKey && account.email && account.baseUrl),
     );
     if (accounts.length === 0) {
-      return [];
+      return { actions: [] };
     }
     const actions = new Set<ChannelMessageActionName>([
       "send",
@@ -427,7 +427,7 @@ export const zulipMessageActions: ChannelMessageActionAdapter = {
     // actions.add("user-reactivate" as ChannelMessageActionName);
     // actions.add("org-settings" as ChannelMessageActionName);
     // actions.add("org-settings-edit" as ChannelMessageActionName);
-    return Array.from(actions);
+    return { actions: Array.from(actions) };
   },
   extractToolSend: ({ args }) => {
     const action = typeof args.action === "string" ? args.action.trim() : "";

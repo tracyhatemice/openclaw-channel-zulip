@@ -1,4 +1,10 @@
-import type { BlockStreamingCoalesceConfig, DmPolicy, GroupPolicy } from "openclaw/plugin-sdk";
+import type { DmPolicy, GroupPolicy } from "./sdk.js";
+
+type BlockStreamingCoalesceConfig = {
+  minChars?: number;
+  maxChars?: number;
+  idleMs?: number;
+};
 
 export type ZulipChatMode = "oncall" | "onmessage" | "onchar";
 

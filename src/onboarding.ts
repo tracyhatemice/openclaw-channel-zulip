@@ -1,5 +1,5 @@
-import type { ChannelOnboardingAdapter, OpenClawConfig, WizardPrompter } from "openclaw/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk";
+import type { ChannelSetupWizardAdapter, OpenClawConfig, WizardPrompter } from "./sdk.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "./sdk.js";
 import { promptAccountId } from "./onboarding-helpers.js";
 import type { ZulipAccountConfig, ZulipConfig } from "./types.js";
 import {
@@ -23,7 +23,7 @@ async function noteZulipSetup(prompter: WizardPrompter): Promise<void> {
   );
 }
 
-export const zulipOnboardingAdapter: ChannelOnboardingAdapter = {
+export const zulipOnboardingAdapter: ChannelSetupWizardAdapter = {
   channel,
   getStatus: async ({ cfg }) => {
     const configured = listZulipAccountIds(cfg).some((accountId) => {
