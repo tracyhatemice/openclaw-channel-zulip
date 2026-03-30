@@ -36,7 +36,7 @@ export { jsonResult } from "openclaw/plugin-sdk/browser-support";
 export { readNumberParam, readStringParam } from "openclaw/plugin-sdk/param-readers";
 export { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 export { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
-export { resolveControlCommandGate } from "openclaw/plugin-sdk/compat";
+export { resolveControlCommandGate } from "openclaw/plugin-sdk/command-auth";
 export { resolveChannelMediaMaxBytes } from "openclaw/plugin-sdk/media-runtime";
 export { readStoreAllowFromForDmPolicy, resolveDmGroupAccessWithLists } from "openclaw/plugin-sdk/channel-policy";
 
