@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 import { createReplyPrefixOptions } from "openclaw/plugin-sdk/channel-runtime";
 import { describe, expect, it } from "vitest";
 import { zulipPlugin } from "./channel.js";

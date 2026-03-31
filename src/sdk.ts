@@ -1,18 +1,11 @@
-import type { PluginRuntime as OpenClawPluginRuntime } from "openclaw/plugin-sdk";
+import type { PluginRuntime as OpenClawPluginRuntime } from "openclaw/plugin-sdk/core";
 
-export type {
-  ChannelAccountSnapshot,
-  ChannelMessageActionAdapter,
-  ChannelMessageActionName,
-  ChannelPlugin,
-  OpenClawConfig,
-  OpenClawPluginApi,
-  PluginRuntime,
-  ReplyPayload,
-  RuntimeEnv,
-  WizardPrompter,
-} from "openclaw/plugin-sdk";
-export { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
+export type { ChannelPlugin, OpenClawConfig, OpenClawPluginApi, PluginRuntime } from "openclaw/plugin-sdk/core";
+export { emptyPluginConfigSchema } from "openclaw/plugin-sdk/core";
+export type { ChannelAccountSnapshot, ChannelMessageActionAdapter, ChannelMessageActionName } from "openclaw/plugin-sdk/channel-contract";
+export type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
+export type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
+export type { WizardPrompter } from "openclaw/plugin-sdk/setup";
 
 export type { ChannelGroupContext } from "openclaw/plugin-sdk/channel-runtime";
 export { createReplyPrefixOptions, createTypingCallbacks } from "openclaw/plugin-sdk/channel-runtime";

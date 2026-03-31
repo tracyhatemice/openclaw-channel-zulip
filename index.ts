@@ -1,5 +1,4 @@
-import type { OpenClawPluginApi } from "./src/sdk.js";
-import { emptyPluginConfigSchema } from "./src/sdk.js";
+import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
 import { zulipPlugin } from "./src/channel.js";
 import { setZulipRuntime } from "./src/runtime.js";
 import { readFileSync, existsSync } from "node:fs";
@@ -31,16 +30,15 @@ function loadZulipEnv(): void {
   }
 }
 
-const plugin = {
+export default defineChannelPluginEntry({
   id: "zulip",
   name: "Zulip",
   description: "Zulip channel plugin",
-  configSchema: emptyPluginConfigSchema(),
-  register(api: OpenClawPluginApi) {
-    loadZulipEnv();
-    setZulipRuntime(api.runtime);
-    api.registerChannel({ plugin: zulipPlugin });
+  plugin: zulipPlugin,
+  setRuntime(runtime) {
+    setZulipRuntime(runtime);
   },
-};
-
-export default plugin;
+  registerFull(_api) {
+    loadZulipEnv();
+  },
+});
