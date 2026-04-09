@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.4.9
+
+### Bug Fixes
+- **Duplicate session noise**: Stop enqueueing an extra synthetic system event for ordinary inbound Zulip messages, which was polluting session history and wasting tokens.
+- **Regression coverage**: Add targeted monitor tests for ordinary inbound handling, duplicate message dedupe, and BAD_EVENT_QUEUE_ID queue re-registration.
+
 ## 2026.3.18
 
 ### Bug Fixes

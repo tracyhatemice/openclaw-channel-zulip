@@ -548,16 +548,6 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
     const sessionKey = threadKeys.sessionKey;
     const historyKey = kind === "dm" ? null : sessionKey;
 
-    const preview = bodyText.replace(/\s+/g, " ").slice(0, 160);
-    const inboundLabel =
-      kind === "dm"
-        ? `Zulip DM from ${senderName}`
-        : `Zulip message in ${roomLabel} from ${senderName}`;
-    core.system.enqueueSystemEvent(`${inboundLabel}: ${preview}`, {
-      sessionKey,
-      contextKey: `zulip:message:${messageId}`,
-    });
-
     const timestamp = message.timestamp ? message.timestamp * 1000 : undefined;
     const textWithId = `${bodyText}\n[zulip message id: ${messageId}]`;
     const body = core.channel.reply.formatInboundEnvelope({
