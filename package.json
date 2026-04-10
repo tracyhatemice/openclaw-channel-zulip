@@ -1,7 +1,7 @@
 {
   "name": "openclaw-channel-zulip",
-  "version": "2026.4.9",
-  "description": "Zulip channel plugin for OpenClaw — concurrent message processing, reaction indicators, file uploads, and full actions API",
+  "version": "2026.4.10",
+  "description": "Zulip channel plugin for OpenClaw — concurrent message processing, file uploads, approval hooks, and full actions API",
   "type": "module",
   "author": "FtlC-ian",
   "license": "MIT",
@@ -53,7 +53,7 @@
       "label": "Zulip",
       "selectionLabel": "Zulip (plugin)",
       "docsLabel": "zulip",
-      "blurb": "Zulip streams/topics with reaction-based reply indicators (plugin, installed separately).",
+      "blurb": "Zulip streams/topics with native session conversation binding and approval hooks (plugin, installed separately).",
       "order": 70
     },
     "install": {

@@ -141,15 +141,18 @@ vi.mock("./uploads.js", () => ({
   normalizeZulipEmojiName: vi.fn((name: string) => name),
 }));
 
+const typingCallbacksMock = vi.fn(() => ({
+  onReplyStart: vi.fn(),
+  onIdle: vi.fn(),
+}));
+
 vi.mock("../sdk.js", () => ({
   createReplyPrefixOptions: vi.fn(() => ({ onModelSelected: vi.fn() })),
   createScopedPairingAccess: vi.fn(() => ({
     upsertPairingRequest: vi.fn(async () => ({ code: "123456", created: false })),
     readStoreForDmPolicy: vi.fn(async () => []),
   })),
-  createTypingCallbacks: vi.fn(() => ({
-    onReplyStart: vi.fn(),
-  })),
+  createTypingCallbacks: typingCallbacksMock,
   logInboundDrop: vi.fn(),
   logTypingFailure: vi.fn(),
   buildPendingHistoryContextFromMap: vi.fn(() => undefined),
@@ -200,6 +203,22 @@ describe("monitorZulipProvider", () => {
     registerZulipQueueMock.mockClear();
     getZulipEventsWithRetryMock.mockClear();
     deleteZulipQueueMock.mockClear();
+  });
+
+  it("wires typing idle cleanup into the reply dispatcher", async () => {
+    state.pollResponses = [
+      {
+        result: "success",
+        events: [{ id: 1, type: "message", message: makeChannelMessage(1000) }],
+      },
+    ];
+
+    await runMonitorOnce();
+
+    const dispatcherCall = state.core.channel.reply.createReplyDispatcherWithTyping.mock.calls[0]?.[0];
+    const typingCallbacks = typingCallbacksMock.mock.results[0]?.value;
+    expect(dispatcherCall?.onReplyStart).toBe(typingCallbacks?.onReplyStart);
+    expect(dispatcherCall?.onIdle).toBe(typingCallbacks?.onIdle);
   });
 
   it("processes ordinary inbound messages without enqueueing a synthetic system event", async () => {

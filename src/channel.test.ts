@@ -2,6 +2,7 @@ import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 import { createReplyPrefixOptions } from "openclaw/plugin-sdk/channel-runtime";
 import { describe, expect, it } from "vitest";
 import { zulipPlugin } from "./channel.js";
+import { resolveZulipSessionConversation } from "./session-conversation.js";
 import { resolveZulipAccount } from "./zulip/accounts.js";
 
 describe("zulipPlugin", () => {
@@ -23,6 +24,15 @@ describe("zulipPlugin", () => {
       }
 
       expect(normalize("zulip:USER123")).toBe("user:USER123");
+    });
+
+    it("resolves stream topic conversation ids through the canonical session hook", () => {
+      expect(resolveZulipSessionConversation({ kind: "channel", rawId: "4:topic:zulip-plugin-pr" })).toEqual({
+        id: "4",
+        threadId: "zulip-plugin-pr",
+        baseConversationId: "4",
+        parentConversationCandidates: ["4"],
+      });
     });
   });
 
@@ -106,6 +116,24 @@ describe("zulipPlugin", () => {
 
       const account = resolveZulipAccount({ cfg, accountId: "default" });
       expect(account.baseUrl).toBe("https://base-site.example.com");
+    });
+
+    it("restricts approvals to normalized allowFrom identities when configured", () => {
+      const result = zulipPlugin.approvalCapability?.authorizeActorAction?.({
+        cfg: {
+          channels: {
+            zulip: {
+              allowFrom: ["@ian@example.com"],
+            },
+          },
+        } as OpenClawConfig,
+        accountId: "default",
+        senderId: "ian@example.com",
+        action: "approve",
+        approvalKind: "exec",
+      });
+
+      expect(result).toEqual({ authorized: true });
     });
   });
 });

@@ -42,8 +42,8 @@ import {
 import {
   createDedupeCache,
   formatInboundFromLabel,
-  resolveThreadSessionKeys,
 } from "./monitor-helpers.js";
+import { buildZulipStreamConversation } from "../session-conversation.js";
 import { sendMessageZulip } from "./send.js";
 import { downloadZulipUpload, extractZulipUploadUrls, normalizeZulipEmojiName } from "./uploads.js";
 
@@ -268,8 +268,8 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
   const reactionConfig = account.config.reactions ?? {};
   const reactionsEnabled = reactionConfig.enabled !== false;
   const reactionClearOnFinish = reactionConfig.clearOnFinish !== false;
-  const reactionStart = normalizeZulipEmojiName(reactionConfig.onStart ?? "eyes");
-  const reactionSuccess = normalizeZulipEmojiName(reactionConfig.onSuccess ?? "check_mark");
+  const reactionStart = normalizeZulipEmojiName(reactionConfig.onStart ?? "");
+  const reactionSuccess = normalizeZulipEmojiName(reactionConfig.onSuccess ?? "");
   const reactionError = normalizeZulipEmojiName(reactionConfig.onError ?? "warning");
 
   const pairing = createScopedPairingAccess({
@@ -528,6 +528,14 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       directId: senderId,
     });
 
+    const streamConversation =
+      kind === "dm"
+        ? null
+        : buildZulipStreamConversation({
+            streamId: channelId,
+            topic,
+          });
+
     const route = core.channel.routing.resolveAgentRoute({
       cfg,
       channel: "zulip",
@@ -535,17 +543,32 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       teamId: undefined,
       peer: {
         kind: chatType,
-        id: isDM ? senderId : channelId,
+        id: isDM ? senderId : (streamConversation?.conversationId ?? channelId),
       },
+      parentPeer:
+        !isDM && streamConversation?.threadId
+          ? {
+              kind: chatType,
+              id: channelId,
+            }
+          : undefined,
     });
 
-    // Use the SDK-provided session key (includes agent: prefix from routing)
-    const baseSessionKey = route.sessionKey ?? `zulip:${account.accountId}:${channelId}`;
-    const threadKeys = resolveThreadSessionKeys({
-      baseSessionKey,
-      threadId: topic ? topic : undefined,
-    });
-    const sessionKey = threadKeys.sessionKey;
+    const parentSessionKey =
+      !isDM && streamConversation?.threadId
+        ? core.channel.routing.resolveAgentRoute({
+            cfg,
+            channel: "zulip",
+            accountId: account.accountId,
+            teamId: undefined,
+            peer: {
+              kind: chatType,
+              id: channelId,
+            },
+          }).sessionKey
+        : undefined;
+
+    const sessionKey = route.sessionKey ?? `zulip:${account.accountId}:${channelId}`;
     const historyKey = kind === "dm" ? null : sessionKey;
 
     const timestamp = message.timestamp ? message.timestamp * 1000 : undefined;
@@ -567,7 +590,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       From: kind === "dm" ? `zulip:${senderId}` : `zulip:channel:${channelId}`,
       To: to,
       SessionKey: sessionKey,
-      ParentSessionKey: threadKeys.parentSessionKey,
+      ParentSessionKey: parentSessionKey,
       AccountId: route.accountId,
       ChatType: chatType,
       ConversationLabel: fromLabel,
@@ -579,7 +602,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       Surface: "zulip" as const,
       MessageSid: messageId,
       ReplyToId: topic ? topic : undefined,
-      MessageThreadId: topic ? threadKeys.sanitizedThreadId : undefined,
+      MessageThreadId: streamConversation?.threadId,
       Timestamp: timestamp,
       WasMentioned: kind !== "dm" ? effectiveWasMentioned : undefined,
       CommandAuthorized: commandAuthorized,
@@ -695,6 +718,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
         ...prefixOptions,
         humanDelay: core.channel.reply.resolveHumanDelayConfig(cfg, route.agentId),
         onReplyStart: typingCallbacks.onReplyStart,
+        onIdle: typingCallbacks.onIdle,
         deliver: async (payload: ReplyPayload) => {
           const mediaUrls = payload.mediaUrls ?? (payload.mediaUrl ? [payload.mediaUrl] : []);
           const rawText = core.channel.text.convertMarkdownTables(payload.text ?? "", tableMode);

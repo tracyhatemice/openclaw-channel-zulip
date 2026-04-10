@@ -154,7 +154,7 @@ export function resolveIdentityName(cfg: OpenClawConfig, agentId: string): strin
  * Replaces unsafe characters with hyphens to avoid path traversal and encoding issues.
  * Falls back to a SHA-256 hash prefix if the result exceeds 200 characters.
  */
-function sanitizeThreadId(threadId: string): string {
+export function sanitizeThreadId(threadId: string): string {
   const sanitized = threadId
     .replace(/[/\\:*?"<>|]/g, "-") // Path-unsafe chars
     .replace(/\s+/g, "-") // Spaces → hyphens

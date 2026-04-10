@@ -23,10 +23,12 @@ import {
   resolveZulipAccount,
   type ResolvedZulipAccount,
 } from "./zulip/accounts.js";
+import { zulipApprovalAuth } from "./approval-auth.js";
 import { normalizeZulipBaseUrl } from "./zulip/client.js";
 import { monitorZulipProvider } from "./zulip/monitor.js";
 import { probeZulip } from "./zulip/probe.js";
 import { sendMessageZulip } from "./zulip/send.js";
+import { resolveZulipSessionConversation } from "./session-conversation.js";
 
 const meta = {
   id: "zulip",
@@ -61,7 +63,7 @@ function formatAllowEntry(entry: string): string {
   return trimmed.replace(/^(zulip|user):/i, "").toLowerCase();
 }
 
-export const zulipPlugin: ChannelPlugin<ResolvedZulipAccount> = {
+export const zulipPlugin = {
   id: "zulip",
   meta: {
     ...meta,
@@ -149,12 +151,22 @@ export const zulipPlugin: ChannelPlugin<ResolvedZulipAccount> = {
       ];
     },
   },
+  approvalCapability: zulipApprovalAuth,
   groups: {
     resolveRequireMention: resolveZulipGroupRequireMention,
   },
   actions: zulipMessageActions,
   messaging: {
     normalizeTarget: normalizeZulipMessagingTarget,
+    ...({
+      resolveSessionConversation: ({
+        kind,
+        rawId,
+      }: {
+        kind: "group" | "channel";
+        rawId: string;
+      }) => resolveZulipSessionConversation({ kind, rawId }),
+    } as Record<string, unknown>),
     targetResolver: {
       looksLikeId: looksLikeZulipTargetId,
       hint: "<stream:NAME[:topic]|user:email|#stream[:topic]|@email>",
@@ -386,4 +398,6 @@ export const zulipPlugin: ChannelPlugin<ResolvedZulipAccount> = {
       });
     },
   },
+} as ChannelPlugin<ResolvedZulipAccount> & {
+  approvalCapability: typeof zulipApprovalAuth;
 };

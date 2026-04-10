@@ -1,6 +1,6 @@
 # openclaw-channel-zulip
 
-> Zulip channel plugin for [OpenClaw](https://github.com/openclaw/openclaw) — concurrent message processing, reaction indicators, file uploads, and full actions API.
+> Zulip channel plugin for [OpenClaw](https://github.com/openclaw/openclaw) — concurrent message processing, native session conversation binding, file uploads, approval hooks, and full actions API.
 
 [![npm version](https://img.shields.io/npm/v/openclaw-channel-zulip.svg)](https://www.npmjs.com/package/openclaw-channel-zulip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,7 +10,7 @@
 ## Features
 
 - ✅ **Concurrent message processing** — events fire-and-forget with staggered start times (200 ms apart), so a burst of incoming messages is handled in parallel rather than queued sequentially
-- ✅ **Reaction indicators** — configurable emoji reactions signal processing state (`:working_on_it:` on start, ✅ on success, ❌ on error, with optional clear-on-finish)
+- ✅ **Native session conversation binding** — stream topics resolve through the SDK session-conversation hook instead of hand-rolled session key grammar
 - ✅ **File uploads** — inbound Zulip file attachments are downloaded and forwarded to the AI pipeline; outbound media is uploaded via Zulip's file upload API
 - ✅ **Full actions API** — react, edit, delete, archive, move messages/topics; subscribe/unsubscribe streams; user management (requires `enableAdminActions: true`)
 - ✅ **Topic directives** — reply topics can be scoped per-message, enabling organized thread-based conversations
@@ -107,13 +107,10 @@ Add the plugin id to `plugins.allow` in `~/.openclaw/openclaw.json`:
       // Group policy: "open" | "allowlist" | "disabled"
       "groupPolicy": "open",
 
-      // Reaction indicators (shown while the bot is processing)
+      // Optional reaction hooks (defaults no longer add start/success emoji spam)
       "reactions": {
-        "enabled": true,
-        "onStart": "working_on_it",
-        "onSuccess": "check",
-        "onError": "x",
-        "clearOnFinish": false
+        "enabled": false,
+        "onError": "warning"
       },
 
       // Block streaming (real-time reply chunks)
@@ -152,6 +149,12 @@ openclaw gateway restart
 4. Use `https://your-org.zulipchat.com` as the `url`
 
 ---
+
+## Approvals and session binding
+
+Topic-scoped conversations now resolve through the SDK session-conversation hook, plus the plugin ships a bootstrap-safe `session-key-api.ts` export for core fallbacks.
+
+Basic approval authorization is now wired through `approvalCapability`, using normalized Zulip identities from `allowFrom` as the first pass.
 
 ## Why concurrent processing?
 

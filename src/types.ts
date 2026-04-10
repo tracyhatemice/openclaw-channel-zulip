@@ -54,7 +54,7 @@ export type ZulipAccountConfig = {
   groupPolicy?: GroupPolicy;
   /** Inbound media max size (MB). Default: 5. */
   mediaMaxMb?: number;
-  /** Reaction indicators. */
+  /** Optional reaction hooks. Defaults no longer add start/success reactions. */
   reactions?: {
     enabled?: boolean;
     clearOnFinish?: boolean;
