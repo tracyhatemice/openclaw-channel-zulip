@@ -10,6 +10,7 @@ import {
   type ChannelAccountSnapshot,
   type ChannelOutboundAdapter,
   type ChannelPlugin,
+  type ReplyPayload,
 } from "./sdk.js";
 import { zulipMessageActions } from "./actions.js";
 import { ZulipConfigSchema } from "./config-schema.js";
@@ -41,6 +42,7 @@ const meta = {
   systemImage: "bubble.left.and.bubble.right",
   order: 65,
   quickstartAllowFrom: true,
+  preferSessionLookupForAnnounceTarget: true,
 } as const;
 
 function normalizeAllowEntry(entry: string): string {
@@ -79,6 +81,7 @@ export const zulipPlugin = {
     chatTypes: ["direct", "channel", "group", "thread"],
     threads: true,
     media: true,
+    interactiveReplies: true,
   },
   streaming: {
     blockStreamingCoalesceDefaults: { minChars: 1500, idleMs: 1000 },
@@ -166,6 +169,25 @@ export const zulipPlugin = {
         kind: "group" | "channel";
         rawId: string;
       }) => resolveZulipSessionConversation({ kind, rawId }),
+      resolveSessionTarget: ({
+        kind,
+        id,
+        threadId,
+      }: {
+        kind: "group" | "channel";
+        id: string;
+        threadId?: string | null;
+      }) => {
+        const trimmedId = id.trim();
+        if (!trimmedId) {
+          return undefined;
+        }
+        if (kind === "group") {
+          return `user:${trimmedId}`;
+        }
+        const trimmedThreadId = threadId?.trim();
+        return trimmedThreadId ? `stream:${trimmedId}:${trimmedThreadId}` : `stream:${trimmedId}`;
+      },
     } as Record<string, unknown>),
     targetResolver: {
       looksLikeId: looksLikeZulipTargetId,
@@ -213,15 +235,21 @@ export const zulipPlugin = {
         if (mediaUrls.length > 0) {
           let lastResult;
           for (let i = 0; i < mediaUrls.length; i++) {
-            lastResult = await outbound.sendMedia!({
-              ...ctx,
-              text: i === 0 ? text : "",
+            lastResult = await sendMessageZulip(ctx.to, i === 0 ? text : "", {
+              accountId: ctx.accountId ?? undefined,
               mediaUrl: mediaUrls[i],
+              interactive: i === 0 ? ctx.payload.interactive : undefined,
+              channelData: i === 0 ? (ctx.payload.channelData as ReplyPayload["channelData"] | undefined) : undefined,
             });
           }
-          return lastResult!;
+          return { channel: "zulip", ...lastResult! };
         }
-        return outbound.sendText!({ ...ctx, text });
+        const result = await sendMessageZulip(ctx.to, text, {
+          accountId: ctx.accountId ?? undefined,
+          interactive: ctx.payload.interactive,
+          channelData: ctx.payload.channelData as ReplyPayload["channelData"] | undefined,
+        });
+        return { channel: "zulip", ...result };
       },
     };
     return outbound;

@@ -13,6 +13,50 @@ import {
   uploadZulipFile,
 } from "./client.js";
 
+type InteractiveButton = {
+  label: string;
+  value: string;
+  style?: "primary" | "secondary" | "success" | "danger";
+};
+
+type InteractiveBlock = {
+  type: "text" | "buttons" | "select";
+  text?: string;
+  buttons?: InteractiveButton[];
+};
+
+type InteractivePayload = {
+  blocks?: InteractiveBlock[];
+};
+
+type ZulipChannelData = {
+  zulip?: {
+    widgetContent?: unknown;
+  };
+  execApproval?: {
+    approvalId?: string;
+    approvalSlug?: string;
+    allowedDecisions?: unknown;
+  };
+  [key: string]: unknown;
+};
+
+type ZulipWidgetChoice = {
+  type: "multiple_choice";
+  short_name: string;
+  long_name: string;
+  reply: string;
+};
+
+type ZulipWidgetContent = {
+  widget_type: "zform";
+  extra_data: {
+    type: "choices";
+    heading: string;
+    choices: ZulipWidgetChoice[];
+  };
+};
+
 export type ZulipSendOpts = {
   apiKey?: string;
   email?: string;
@@ -20,6 +64,8 @@ export type ZulipSendOpts = {
   accountId?: string;
   mediaUrl?: string;
   topic?: string;
+  interactive?: InteractivePayload;
+  channelData?: ZulipChannelData;
 };
 
 export type ZulipSendResult = {
@@ -34,6 +80,60 @@ type ZulipTarget =
 const DEFAULT_TOPIC = "general";
 
 const getCore = () => getZulipRuntime();
+
+function interactiveToZulipWidgetContent(
+  interactive?: InteractivePayload,
+): ZulipWidgetContent | undefined {
+  const choices: ZulipWidgetChoice[] = [];
+  for (const block of interactive?.blocks ?? []) {
+    if (block.type !== "buttons") {
+      continue;
+    }
+    for (const button of block.buttons ?? []) {
+      const label = button.label?.trim();
+      const reply = button.value?.trim();
+      if (!label || !reply) {
+        continue;
+      }
+      choices.push({
+        type: "multiple_choice",
+        short_name: label,
+        long_name: label,
+        reply,
+      });
+    }
+  }
+  if (choices.length === 0) {
+    return undefined;
+  }
+  const heading =
+    interactive?.blocks?.find((block) => block.type === "text")?.text?.trim() || "Choose an action";
+  return {
+    widget_type: "zform",
+    extra_data: {
+      type: "choices",
+      heading,
+      choices,
+    },
+  };
+}
+
+export { interactiveToZulipWidgetContent };
+
+export function resolveZulipWidgetContent(params: {
+  interactive?: InteractivePayload;
+  channelData?: ZulipChannelData;
+}): unknown {
+  const interactiveWidget = interactiveToZulipWidgetContent(params.interactive);
+  if (interactiveWidget) {
+    return interactiveWidget;
+  }
+  const explicitWidget = params.channelData?.zulip?.widgetContent;
+  if (explicitWidget && typeof explicitWidget === "object" && !Array.isArray(explicitWidget)) {
+    return explicitWidget;
+  }
+  return undefined;
+}
 
 /**
  * Escape triple backticks in text to prevent breaking Zulip code fences.
@@ -75,8 +175,24 @@ async function writeTempFile(
   return { filePath, dir };
 }
 
-function parseZulipTarget(raw: string): ZulipTarget {
+function normalizeLegacyZulipTarget(raw: string): { normalized: string; convertedFromLegacy: boolean } {
   const trimmed = raw.trim();
+  const legacyMatch = trimmed.match(/^(\d+):topic:(.+)$/);
+  if (!legacyMatch) {
+    return { normalized: trimmed, convertedFromLegacy: false };
+  }
+  const [, streamId, topic] = legacyMatch;
+  return {
+    normalized: `stream:${streamId}:${topic.trim()}`,
+    convertedFromLegacy: true,
+  };
+}
+
+export { normalizeLegacyZulipTarget };
+
+function parseZulipTarget(raw: string): ZulipTarget {
+  const { normalized } = normalizeLegacyZulipTarget(raw);
+  const trimmed = normalized.trim();
   if (!trimmed) {
     throw new Error("Recipient is required for Zulip sends");
   }
@@ -158,7 +274,14 @@ export async function sendMessageZulip(
   }
 
   const client = createZulipClient({ baseUrl, email, apiKey });
-  const target = parseZulipTarget(to);
+  const normalizedTarget = normalizeLegacyZulipTarget(to);
+  if (normalizedTarget.convertedFromLegacy) {
+    logger.warn?.("zulip send received legacy session-key target, auto-converting", {
+      originalTo: to,
+      normalizedTo: normalizedTarget.normalized,
+    });
+  }
+  const target = parseZulipTarget(normalizedTarget.normalized);
   let message = text?.trim() ?? "";
   const rawMediaUrl = opts.mediaUrl?.trim();
   let mediaUrl = rawMediaUrl;
@@ -221,15 +344,42 @@ export async function sendMessageZulip(
     message = core.channel.text.convertMarkdownTables(message, tableMode);
   }
 
-  if (!message) {
+  const interactiveWidget = interactiveToZulipWidgetContent(opts.interactive);
+  const widgetContent = interactiveWidget ?? resolveZulipWidgetContent({
+    interactive: undefined,
+    channelData: opts.channelData,
+  });
+
+  if (!message && !widgetContent) {
     throw new Error("Zulip message is empty");
   }
+
+  const widgetContentSource = interactiveWidget
+    ? "interactive"
+    : opts.channelData?.zulip?.widgetContent
+      ? "channelData"
+      : "none";
+  logger.debug?.("zulip send payload", {
+    targetKind: target.kind,
+    hasInteractive: Boolean(opts.interactive?.blocks?.length),
+    channelDataKeys: Object.keys(opts.channelData ?? {}),
+    hasExecApprovalChannelData: Boolean(opts.channelData?.execApproval),
+    hasExplicitWidgetContent: Boolean(opts.channelData?.zulip?.widgetContent),
+    hasWidgetContent: Boolean(widgetContent),
+    widgetContentSource,
+    widgetType:
+      widgetContent && typeof widgetContent === "object" && "widget_type" in widgetContent
+        ? (widgetContent as { widget_type?: unknown }).widget_type
+        : undefined,
+    messageLength: message.length,
+  });
 
   let messageId = "unknown";
   if (target.kind === "user") {
     const response = await sendZulipPrivateMessage(client, {
       to: target.email,
       content: message,
+      widgetContent,
     });
     messageId = response.id ? String(response.id) : "unknown";
   } else {
@@ -241,9 +391,17 @@ export async function sendMessageZulip(
       stream: target.stream,
       topic: topic || DEFAULT_TOPIC,
       content: message,
+      widgetContent,
     });
     messageId = response.id ? String(response.id) : "unknown";
   }
+
+  logger.debug?.("zulip send success", {
+    targetKind: target.kind,
+    messageId,
+    hadWidget: Boolean(widgetContent),
+    widgetContentSource,
+  });
 
   core.channel.activity.record({
     channel: "zulip",

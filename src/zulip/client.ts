@@ -406,6 +406,7 @@ export async function sendZulipStreamMessage(
     stream: string;
     topic: string;
     content: string;
+    widgetContent?: unknown;
   },
 ): Promise<{ id?: number }> {
   const body = new URLSearchParams({
@@ -414,6 +415,9 @@ export async function sendZulipStreamMessage(
     topic: params.topic,
     content: params.content,
   });
+  if (params.widgetContent) {
+    body.set("widget_content", JSON.stringify(params.widgetContent));
+  }
   const payload = await zulipRequestWithRetry<ZulipApiResponse & { id?: number }>(
     client,
     "/messages",
@@ -431,6 +435,7 @@ export async function sendZulipPrivateMessage(
   params: {
     to: string | string[];
     content: string;
+    widgetContent?: unknown;
   },
 ): Promise<{ id?: number }> {
   const recipients = Array.isArray(params.to) ? params.to : [params.to];
@@ -439,6 +444,9 @@ export async function sendZulipPrivateMessage(
     to: JSON.stringify(recipients),
     content: params.content,
   });
+  if (params.widgetContent) {
+    body.set("widget_content", JSON.stringify(params.widgetContent));
+  }
   const payload = await zulipRequestWithRetry<ZulipApiResponse & { id?: number }>(
     client,
     "/messages",
